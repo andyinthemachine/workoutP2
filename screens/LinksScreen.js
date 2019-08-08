@@ -20,10 +20,41 @@ export default class LinksScreen extends React.Component {
   }
 
   componentDidMount() {
+    console.log("cdmount");
     this._loadClient();
+
+    const { addListener } = this.props.navigation;          
+    this.listeners = [addListener('didFocus', () => { this._loadClient();})]  
+
+    
+    // const { isDisplayed } = this.state
+    // const self = this
+    // this.listeners = [
+    //   addListener('didFocus', () => {
+    //     if (self.state.isDisplayed !== true) {
+    //       self.setState({ isDisplayed: true })
+    //       this._loadClient();
+    //     }
+    //   }),
+    //   addListener('willBlur', () => {
+    //     if (self.state.isDisplayed !== false) {
+    //       self.setState({ isDisplayed: false })
+    //     }
+    //   }),
+    // ]
+    // const { navigation } = this.props;
+    // navigation.addListener('willFocus', () => this.forceUpdate())
+    // run function that updates the data on entering the screen
+  }
+
+  componentWillUnmount() {
+    this.listeners.forEach(
+      sub => { sub.remove() },
+    )
   }
 
   _onRefresh = () => {
+    console.log("refresh");
     this.setState({ refreshing: true });
     const stitchAppClient = Stitch.defaultAppClient;
     const mongoClient = stitchAppClient.getServiceClient(
@@ -45,6 +76,8 @@ export default class LinksScreen extends React.Component {
   };
 
   render() {
+    console.log("render");
+
     const sections =
       this.state.tasks == undefined
         ? [{ data: [{ title: "Loading..." }], title: "Loading..." }]
@@ -155,11 +188,10 @@ export default class LinksScreen extends React.Component {
   };
 
   _loadClient() {
+    console.log("load client");
+
     const stitchAppClient = Stitch.defaultAppClient;
-    const mongoClient = stitchAppClient.getServiceClient(
-      RemoteMongoClient.factory,
-      "mongodb-atlas"
-    );
+    const mongoClient = stitchAppClient.getServiceClient(RemoteMongoClient.factory,"mongodb-atlas");
     const db = mongoClient.db("taskmanager");
     const tasks = db.collection("tasks");
     tasks
@@ -172,6 +204,7 @@ export default class LinksScreen extends React.Component {
         console.warn(err);
       });
   }
+
   _onPressComplete(itemID) {
     if (itemID) {
       const stitchAppClient = Stitch.defaultAppClient;
@@ -188,8 +221,7 @@ export default class LinksScreen extends React.Component {
           { upsert: true }
         )
         .then(() => {
-          tasks
-            .find({ status: "new" }, { sort: { date: -1 } })
+          tasks.find({ status: "new" }, { sort: { date: -1 } })
             .asArray()
             .then(docs => {
               this.setState({ tasks: docs });
@@ -208,6 +240,7 @@ export default class LinksScreen extends React.Component {
   }
 
   _onPressDelete(itemID) {
+    console.log("delete id = ", itemID);
     const stitchAppClient = Stitch.defaultAppClient;
     const mongoClient = stitchAppClient.getServiceClient(
       RemoteMongoClient.factory,
@@ -218,8 +251,8 @@ export default class LinksScreen extends React.Component {
     tasks
       .deleteOne({ _id: itemID })
       .then(() => {
-        tasks
-          .find({ status: "new" }, { sort: { date: -1 } })
+        console.log("deleteOne.then");
+        tasks.find({ status: "new" }, { sort: { date: -1 } })
           .asArray()
           .then(docs => {
             this.setState({ tasks: docs });

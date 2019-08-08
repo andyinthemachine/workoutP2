@@ -1,6 +1,6 @@
 
 import React from "react";
-import {RefreshControl, Platform, SectionList, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, Platform, SectionList, StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
 import Swipeout from "react-native-swipeout";
 import moment from "moment/min/moment-with-locales";
@@ -21,6 +21,14 @@ export default class SettingsScreen extends React.Component {
 
   componentDidMount() {
     this._loadClient();
+    const { addListener } = this.props.navigation;          
+    this.listeners = [addListener('didFocus', () => { this._loadClient();})]  
+  }
+  
+  componentWillUnmount() {
+    this.listeners.forEach(
+      sub => { sub.remove() },
+    )
   }
 
   _onRefresh = () => {
@@ -55,8 +63,8 @@ export default class SettingsScreen extends React.Component {
       this.state.tasks == undefined
         ? [{ data: [{ title: "Loading..." }], title: "Loading..." }]
         : this.state.tasks.length > 0
-        ? [{ data: this.state.tasks, title: "Completed tasks" }]
-        : [
+          ? [{ data: this.state.tasks, title: "Completed tasks" }]
+          : [
             {
               data: [{ title: "No completed tasks" }],
               title: "No completed tasks"
@@ -116,23 +124,23 @@ export default class SettingsScreen extends React.Component {
         >
           <View style={styles.taskListTextTime}>
             {item.title != "No completed tasks" &&
-            item.title != "Loading..." ? (
-              <Text style={styles.taskListTextTime}>
-                created {moment(item.date).fromNow()}
-              </Text>
-            ) : item.title == "No completed tasks" ? (
-              <AntDesign
-                name={Platform.OS == "ios" ? "smileo" : "smileo"}
-                size={30}
-                style={{
-                  textAlign: "center",
-                  color: "lightgray",
-                  marginTop: 25
-                }}
-              />
-            ) : (
-              <Text />
-            )}
+              item.title != "Loading..." ? (
+                <Text style={styles.taskListTextTime}>
+                  created {moment(item.date).fromNow()}
+                </Text>
+              ) : item.title == "No completed tasks" ? (
+                <AntDesign
+                  name={Platform.OS == "ios" ? "smileo" : "smileo"}
+                  size={30}
+                  style={{
+                    textAlign: "center",
+                    color: "lightgray",
+                    marginTop: 25
+                  }}
+                />
+              ) : (
+                  <Text />
+                )}
           </View>
           <Text style={styles.sectionContentText}>
             {item.title != "No completed tasks" ? item.description : ""}
@@ -171,33 +179,36 @@ export default class SettingsScreen extends React.Component {
       });
   }
   _onPressArchive(itemID) {
-    const stitchAppClient = Stitch.defaultAppClient;
-    const mongoClient = stitchAppClient.getServiceClient(
-      RemoteMongoClient.factory,
-      "mongodb-atlas"
-    );
-    const db = mongoClient.db("taskmanager");
-    const tasks = db.collection("tasks");
-    tasks
-      .updateOne(
-        { _id: itemID },
-        { $set: { status: "archived", archivedDate: new Date() } },
-        { upsert: true }
-      )
-      .then(() => {
-        tasks
-          .find({ status: "completed" }, { sort: { date: -1 } })
-          .asArray()
-          .then(docs => {
-            this.setState({ tasks: docs });
-          })
-          .catch(err => {
-            console.warn(err);
-          });
-      })
-      .catch(err => {
-        console.warn(err);
-      });
+    if (itemID) {
+
+      const stitchAppClient = Stitch.defaultAppClient;
+      const mongoClient = stitchAppClient.getServiceClient(
+        RemoteMongoClient.factory,
+        "mongodb-atlas"
+      );
+      const db = mongoClient.db("taskmanager");
+      const tasks = db.collection("tasks");
+      tasks
+        .updateOne(
+          { _id: itemID },
+          { $set: { status: "archived", archivedDate: new Date() } },
+          { upsert: true }
+        )
+        .then(() => {
+          tasks
+            .find({ status: "completed" }, { sort: { date: -1 } })
+            .asArray()
+            .then(docs => {
+              this.setState({ tasks: docs });
+            })
+            .catch(err => {
+              console.warn(err);
+            });
+        })
+        .catch(err => {
+          console.warn(err);
+        });
+    }
   }
 }
 
